@@ -19,6 +19,7 @@ import {
 	fastDiff,
 	insertAt,
 	isComment,
+	isProcessingInstruction,
 	isNode,
 	isText,
 	remove,
@@ -482,11 +483,16 @@ export class ViewRenderer extends ViewRendererBase {
 
 		// Possible options are:
 		// "FILLER{}"
-		// "FILLERadded-text{}"
+		// "FILLERadded-text{}" (on Android, or if the filler is still needed at the selection, e.g. when typing at the end
+		// of a highlight; elsewhere the filler is removed once text follows it, so the word joiners don't stick
+		// to the preceding word, e.g. for the spellchecker)
 		const selectionPosition = this.selection.getFirstPosition()!;
 		const position = this.domConverter.viewPositionToDom( selectionPosition );
 
-		if ( position && isText( position.parent ) && startsWithFiller( position.parent ) ) {
+		if (
+			position && isText( position.parent ) && startsWithFiller( position.parent ) &&
+			( env.isAndroid || isInlineFiller( position.parent ) || this._needsInlineFillerAtSelection() )
+		) {
 			return true;
 		}
 
@@ -522,7 +528,7 @@ export class ViewRenderer extends ViewRendererBase {
 		if ( isInlineFiller( domFillerNode ) ) {
 			domFillerNode.remove();
 		} else {
-			domFillerNode.data = domFillerNode.data.substr( INLINE_FILLER_LENGTH );
+			domFillerNode.data = domFillerNode.data.slice( INLINE_FILLER_LENGTH );
 		}
 
 		this._inlineFiller = null;
@@ -1325,6 +1331,7 @@ function areSimilarElements( node1: DomNode, node2: DomNode ): boolean {
 	return isNode( node1 ) && isNode( node2 ) &&
 		!isText( node1 ) && !isText( node2 ) &&
 		!isComment( node1 ) && !isComment( node2 ) &&
+		!isProcessingInstruction( node1 ) && !isProcessingInstruction( node2 ) &&
 		( node1 as DomElement ).tagName.toLowerCase() === ( node2 as DomElement ).tagName.toLowerCase();
 }
 

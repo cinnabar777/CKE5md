@@ -7,10 +7,11 @@
 
 .ck.ck-editor__main > .ck-editor__editable {
 	/* https://github.com/ckeditor/ckeditor5/issues/3384 */
-	background: var(--ck-color-base-background);
+	background: var(--ck-editor-editable-background, var(--ck-color-surface-canvas));
 
 	&:not(.ck-focused) {
-		border-color: var(--ck-color-base-border);
+		/* The same color as the rest of the editor frame (the toolbar and the menu bar). */
+		border-color: var(--ck-editor-frame-border-color);
 	}
 }
 
@@ -33,7 +34,8 @@
 
 	& .ck-editor__top .ck-sticky-panel .ck-toolbar {
 		/* https://github.com/ckeditor/ckeditor5-editor-classic/issues/62 */
-		/* Backward compatibility: falls back to legacy --ck-z-panel if overridden. */
+		/* Backward compatibility: reads the legacy `--ck-z-panel`, which is always declared and follows
+		   `--ck-z-overlay`, so overrides of either apply. The fallback is never used. */
 		z-index: var(--ck-z-panel, var(--ck-z-overlay));
 	}
 }

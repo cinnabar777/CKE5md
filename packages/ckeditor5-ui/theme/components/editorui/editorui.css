@@ -21,9 +21,24 @@
 
 	/* Color */
 	--ck-editor-frame-border-color: var(--ck-color-border-container);
+	/* Border color of the main editing roots at rest in the inline, balloon, decoupled, and multi-root editors.
+	   Secondary editors (comment inputs, sub-editors) keep a transparent border. The classic editor draws the frame
+	   with `--ck-editor-frame-border-color` instead, which also borders its toolbar. */
+	--ck-editor-editable-border-color: transparent;
+	/* Background of the editing area (the main editing roots of every editor type). Read through the `background`
+	   shorthand, so a gradient or an image works too. Declared `initial`: the classic editor and the fullscreen page
+	   fall back to the canvas color, and the other editor types stay transparent. */
+	--ck-editor-editable-background: initial;
+	/* Background of the text selection in an editing area that does not have focus. */
+	--ck-editor-editable-blurred-selection-background: hsl(0 0% 85%);
 
 	/* State / meta */
 	--ck-editor-editable-focus-border-color: var(--ck-interactive-focus-border-color);
+	/* Shadow of a focused editing area that is not a nested editable, and of the source editing textarea that replaces
+	   it. Declared `initial` and read with `--ck-inset-shadow-sm` as fallback. Backward compatibility: reads the legacy
+	   `--ck-inner-shadow` first if overridden. The comment input sets the legacy name to `none` in its scope, so it has
+	   no focus shadow. */
+	--ck-editor-editable-focus-shadow: initial;
 }
 
 /*
@@ -105,6 +120,21 @@
 }
 
 /*
+ * The editing area background of the main editing roots. Zero specificity, so any integrator rule with a class wins,
+ * and the classic editor and the fullscreen page keep their own rules with a fallback. While the token is `initial`,
+ * the declaration computes to `transparent`. Nested editables and secondary editors (comment inputs, sub-editors) are
+ * not editing roots, so they keep their look.
+ */
+:where(.ck.ck-editor__editable_root:not(.ck-editor__nested-editable)) {
+	background: var(--ck-editor-editable-background);
+
+	/* An internal helper (not a token) that `.ck-editor__editable_inline` reads for its border color, so the border
+	   keeps its specificity and rules such as the revision history roots still override it. Secondary editors keep
+	   the transparent border. */
+	--_ck-editor-editable-border-color: var(--ck-editor-editable-border-color);
+}
+
+/*
  * Round only the top-level editing roots of the editor (marked with `ck-editor__editable_root` by the
  * editor UI views). Scoping to the marker keeps the radius off secondary editables that share the
  * `.ck-editor__editable` class - comment inputs, the AI and revision-history sub-editors, etc. The
@@ -118,15 +148,16 @@
 	&.ck-focused {
 		outline: none;
 		border-color: var(--ck-editor-editable-focus-border-color);
-		/* Backward compatibility: falls back to legacy --ck-inner-shadow if overridden. */
-		box-shadow: var(--ck-inner-shadow, var(--ck-inset-shadow-sm)), 0 0;
+		/* Backward compatibility: reads the legacy `--ck-inner-shadow` first if overridden. */
+		box-shadow: var(--ck-inner-shadow, var(--ck-editor-editable-focus-shadow, var(--ck-inset-shadow-sm))), 0 0;
 	}
 }
 
 .ck.ck-editor__editable_inline {
 	overflow: auto;
 	padding: var(--ck-editor-editable-padding);
-	border: var(--ck-border-width-control) solid transparent;
+	/* The color comes from `--ck-editor-editable-border-color` on the main editing roots only (see above). */
+	border: var(--ck-border-width-control) solid var(--_ck-editor-editable-border-color, transparent);
 
 	&[dir="ltr"] {
 		text-align: left;
@@ -156,8 +187,8 @@
 	keeps its normal (non-blurred) color, which is harmless. */
 	/* eslint-disable-next-line css/use-baseline */
 	&.ck-blurred ::selection {
-		/* Fallback to `--ck-color-editable-blur-selection` for backward compatibility. */
-		background: var(--ck-color-editable-blur-selection, hsl(0 0% 85%));
+		/* Backward compatibility: reads the legacy `--ck-color-editable-blur-selection` first if overridden. */
+		background: var(--ck-color-editable-blur-selection, var(--ck-editor-editable-blurred-selection-background));
 	}
 
 	&.ck-editor__editable_inline-root br {

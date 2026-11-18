@@ -268,7 +268,7 @@ The following `@Output` properties are supported by the CKEditor&nbsp;5 rich tex
 
 ### `ready`
 
-Fired when the editor is ready. It corresponds with the [`editor#ready`](https://ckeditor.com/docs/ckeditor5/latest/api/module_core_editor_editor-Editor.html#event-ready) event.
+Fired when the editor is ready. It corresponds with the {@link module:core/editor/editor~Editor#event:ready `editor#ready`} event.
 It is fired with the editor instance.
 
 ### `change`
@@ -754,14 +754,22 @@ Because of the breaking changes in the Angular library output format, the `@cked
       <td colspan="3">Actively supported versions</td>
     </tr>
     <tr>
-      <td><code>^11</code></td>
-      <td><code>19+</code></td>
-      <td>Requires CKEditor&nbsp;5 in version <a href="https://github.com/ckeditor/ckeditor5/releases/tag/v47.0.0">47</a> or higher.</td>
+      <td><code>^13</code></td>
+      <td><code>21+</code></td>
+      <td>Requires CKEditor&nbsp;5 in version <a href="https://github.com/ckeditor/ckeditor5/releases/tag/v49.0.0">49</a> or higher.</td>
     </tr>
-    <tr>
     <tr>
       <td colspan="3">Past releases (no longer maintained)</td>
     </tr>
+    <tr>
+      <td><code>^12</code></td>
+      <td><code>20+</code></td>
+      <td>Requires CKEditor&nbsp;5 in version <a href="https://github.com/ckeditor/ckeditor5/releases/tag/v49.0.0">49</a> or higher.</td>
+    </tr>
+    <tr>
+      <td><code>^11</code></td>
+      <td><code>19+</code></td>
+      <td>Requires CKEditor&nbsp;5 in version <a href="https://github.com/ckeditor/ckeditor5/releases/tag/v47.0.0">47</a> or higher.</td>
     </tr>
     <tr>
       <td><code>^10</code></td>

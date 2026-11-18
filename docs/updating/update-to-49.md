@@ -3,7 +3,7 @@ category: update-guides
 meta-title: Update to version 49.x | CKEditor 5 Documentation
 menu-title: Update to v49.x
 order: 50
-modified_at: 2026-10-01
+modified_at: 2026-11-03
 ---
 
 # Update to CKEditor&nbsp;5 v49.x
@@ -17,6 +17,51 @@ modified_at: 2026-10-01
 
 	Then ask your agent, for example: _"Update CKEditor&nbsp;5 to the latest version"_ or name the version you want. Review the changes before you commit them. See the {@link getting-started/ai-coding-agents Using CKEditor&nbsp;5 with AI coding agents} guide for setup options and supported agents.
 </info-box>
+
+## Update to CKEditor&nbsp;5 v49.1.0
+
+Released on 4 November, 2026. ([See full release notes](https://github.com/ckeditor/ckeditor5/releases/tag/v49.1.0))
+
+This release introduces the Editing Toolkit, lets CKEditor&nbsp;AI work with your features through custom skills, and restores several legacy CSS variables of the refreshed theme.
+
+### Editing Toolkit (⭐)
+
+The {@link features/editing-toolkit-overview Editing Toolkit} is a new set of APIs for developers who build their own editing experiences. {@link features/editing-toolkit-comparing-documents Compare} compares two versions of HTML content and applies or suggests individual changes, and the {@link features/editing-toolkit-proposing-changes Proposed changes UI} lets users review them first. {@link features/editing-toolkit-coauthor Coauthor} lets server-side agents draft content, suggest edits, and leave comments, and is in early access.
+
+The toolkit also works without AI, for example to {@link features/editing-toolkit-deterministic-scripts compare the document with an updated Word file}.
+
+### CKEditor&nbsp;AI: custom skills for your features (⭐)
+
+{@link features/ckeditor-ai-overview CKEditor&nbsp;AI} can now work with the content of your plugins. Upload a [custom skill](https://ckeditor.com/docs/cs/latest/guides/ckeditor-ai/extensions/skills.html#custom-skills) that describes your feature's markup and rules, and register the plugin with {@link module:ai/aicore/aieditorconfig~AIEditorConfig#add `AIEditorConfig#add()`}. See {@link features/ckeditor-ai-feature-understanding#registering-custom-features Registering custom features}.
+
+If you used the `AIEditorConfig` type, rename it to `AIEditorConfigSnapshot`. The `AIEditorConfig` name now refers to the plugin that registers custom features.
+
+### CKEditor&nbsp;AI: hooks (⭐)
+
+On-premises deployments can call a service you host before the agent answers an {@link features/ckeditor-ai-chat AI Chat} message. Use [hooks](https://ckeditor.com/docs/cs/latest/guides/ckeditor-ai/extensions/hooks.html) to enforce your policies, answer from your systems, or brief the CKEditor&nbsp;AI agent. They fit when you already have an AI platform with access to your data and want it to take part in the chat.
+
+### Other improvements and fixes
+
+* **New theme improvements and fixes**: [v49.0.0](https://github.com/ckeditor/ckeditor5/releases/tag/v49.0.0) introduced a refreshed default theme built on three layers of design tokens (foundation scales, semantic roles, and per-component tokens), with legacy variable names kept as aliases. Some aliases were silently ignored even though the {@link updating/migration-to-refreshed-theme migration guide} said they worked. They work again, so overrides of focus borders and the shadows of dropdowns, balloons, menus, and comment and suggestion cards apply with no changes on your side. Additionally, more of the UI moved from hard-coded values to tokens ([#20255](https://github.com/ckeditor/ckeditor5/issues/20255), [#20257](https://github.com/ckeditor/ckeditor5/issues/20257), [#20259](https://github.com/ckeditor/ckeditor5/issues/20259)): button colors in the resting, hover, and active states, toolbar button borders and radius, form and dialog headers, the insert table grid, and find and replace results. Every new token defaults to the value used today, so the default theme looks the same. See the full token list in the {@link framework/theme-customization theme customization guide}.
+* **Shadow DOM support for more features**: the {@link features/ckbox CKBox} file manager and image editor, the "Edit source" dialog of enhanced source editing, and footnotes work correctly when the editor renders in a shadow root. Plugin authors get two helpers for events that do not cross a shadow boundary, such as `scroll`: `listenToEventRoots()` listens on the document and on every shadow root the editor lives in, and `DomTargetsListener` listens on a set of targets you can refresh, like a balloon's positioning target. See the {@link framework/deep-dive/shadow-dom Shadow DOM deep dive}.
+* **More reliable balloons and toolbars**: tooltips, the link balloon, and the mention list appear in the right place again on scrolled pages when `<body>` or the overlay container is positioned (a v49.0.0 regression, [#20251](https://github.com/ckeditor/ckeditor5/issues/20251)).
+* **Content loading**: some browsers started parsing `<?target data?>` markup as processing instruction nodes instead of comments, which made the editor throw while loading or pasting such content. The editor ignores these nodes the same way it ignores comments, and data processors have a new `skipProcessingInstructions` flag for integrations that need to keep them.
+* **Email export fixes**: Email export converts `hsl()` and `hsla()` colors to `rgb()` and `rgba()` through the new `transformEmailStylesColors()` transformation, since many email clients, including Outlook, do not support HSL. The default font and table palettes also no longer trigger warnings in the email configuration logger.
+
+### Content styles exposed as design tokens
+
+The hardcoded colors of the content rendered inside `.ck-content` are now design tokens, so you can recolor the block quote, code block, inline code, horizontal line, page break, table, and to-do list from `:root` and `:host` without overriding element rules. Each token defaults to its previous value, so the content looks unchanged. The {@link getting-started/setup/content-styles#feature-specific-styling Content styles} guide lists them per feature.
+
+The existing table caption, image caption, and mention color tokens were renamed to the same convention. The old names still work as fallbacks but are deprecated, so update any overrides to the new names:
+
+| Old name (deprecated) | New name |
+|---|---|
+| `--ck-content-color-table-caption-background` | `--ck-content-table-caption-background-color` |
+| `--ck-content-color-table-caption-text` | `--ck-content-table-caption-text-color` |
+| `--ck-content-color-image-caption-background` | `--ck-content-image-caption-background-color` |
+| `--ck-content-color-image-caption-text` | `--ck-content-image-caption-text-color` |
+| `--ck-content-color-mention-background` | `--ck-content-mention-background` |
+| `--ck-content-color-mention-text` | `--ck-content-mention-text-color` |
 
 ## Update to CKEditor&nbsp;5 v49.0.0
 
@@ -120,6 +165,14 @@ ClassicEditor
 
 See the {@link features/ckeditor-ai-integration#overlay-ui-container overlay UI container} section of the integration guide for details, including what to point it at when the AI user interface runs inside a shadow root.
 
+### Move to ES2023 and native CSS nesting
+
+In every major release, CKEditor&nbsp;5 aligns its build target with the "Widely available" category of the [Baseline](https://web.dev/baseline) web platform standard, as described in the {@link updating/technology-upgrades-policy Technology upgrades policy} guide. In v49, this moves the JavaScript target to ES2023 and brings native CSS nesting to the distributed style sheets.
+
+All packages and CDN builds now target ES2023 instead of ES2022. Every supported browser handles ES2023, so most integrations need no change. If your application has to run in older browsers, use the npm packages, because you cannot transpile the CDN builds. Then transpile the CKEditor&nbsp;5 packages in your build and add polyfills for the missing built-in methods.
+
+The distributed style sheets now keep the native CSS nesting of the source code instead of flattening it into separate selectors. Supported browsers read nested rules natively, so loading the style sheets needs no change. However, tools that process the CKEditor&nbsp;5 CSS have to support nesting. Some PostCSS configurations and minifiers are older than CSS nesting. If any of your tools does not support it, add a nesting transform to your build. Selector specificity stays the same as in v48, which already {@link updating/update-to-48#css-nesting-output-now-follows-native-specificity-more-closely aligned it with native CSS nesting}.
+
 ### Major breaking changes in this release
 
 * **[ckeditor5](https://www.npmjs.com/package/ckeditor5), [core](https://www.npmjs.com/package/@ckeditor/ckeditor5-core), [utils](https://www.npmjs.com/package/@ckeditor/ckeditor5-utils)**: The `@ckeditor/ckeditor5-watchdog` package was removed, and with it the automatic restart of a crashed editor. An editor that crashes now stays as it is instead of being rebuilt from the data it had before, but its state may no longer be consistent.
@@ -132,6 +185,8 @@ See the {@link features/ckeditor-ai-integration#overlay-ui-container overlay UI 
 * **[core](https://www.npmjs.com/package/@ckeditor/ckeditor5-core)**: `ActionsRecorder` moved from `@ckeditor/ckeditor5-watchdog` to `@ckeditor/ckeditor5-core`. The `ActionsRecorderConfig`, `ActionsRecorderEntry`, `ActionsRecorderEntryEditorSnapshot`, `ActionsRecorderErrorCallback`, `ActionsRecorderFilterCallback`, and `ActionsRecorderMaxEntriesCallback` types moved with it, as did the `config.actionsRecorder` declaration. Code importing from `ckeditor5` needs no change. Code importing from `@ckeditor/ckeditor5-watchdog` has to import from `@ckeditor/ckeditor5-core` instead.
 * **[ui](https://www.npmjs.com/package/@ckeditor/ckeditor5-ui)**: The `TooltipManager` constructor is private now. As before, there is one shared instance per page. Replace `new TooltipManager( editor )` with `TooltipManager.for( locale )`, and `tooltipManager.destroy( editor )` with `tooltipManager.release()`. Call `release()` once for every `for()` call: the instance counts its holders and is destroyed when the last one releases it. The manager is no longer tied to editors. Each editor registers its own body collection with `TooltipManager#registerBodyCollection()`, and UI that renders in a body collection of its own, outside an editor, has to do the same to display tooltips. Such UI unregisters its collection with `TooltipManager#unregisterBodyCollection()` when it is destroyed. Code that only reads `editor.ui.tooltipManager` needs no change.
 * **[ui](https://www.npmjs.com/package/@ckeditor/ckeditor5-ui)**: The `BodyCollection#detachFromDom()` method is renamed to `BodyCollection#destroy()`. It still destroys the views and removes their container from the DOM. Replace `detachFromDom()` calls with `destroy()`. If your code called `detachFromDom()` and then `destroy()`, keep only `destroy()`. To remove the container from the DOM without destroying the views, so that you can attach it again later, use the new `BodyCollection#unmountFromDom()` method.
+* All packages and CDN builds now target ES2023 instead of ES2022, so environments without ES2023 support need transpilation and polyfills. See [Move to ES2023 and native CSS nesting](#move-to-es2023-and-native-css-nesting).
+* The distributed style sheets now use native CSS nesting instead of flattened selectors, so tools that post-process the CKEditor&nbsp;5 CSS have to support it. See [Move to ES2023 and native CSS nesting](#move-to-es2023-and-native-css-nesting).
 
 ### Minor breaking changes in this release
 
@@ -144,3 +199,4 @@ See the {@link features/ckeditor-ai-integration#overlay-ui-container overlay UI 
   * It returns `<body>` when a style such as `position: relative` or `transform` makes the body the containing block. Previously, it returned `null` for the main document's `<body>` in every case.
   * For an element inside an iframe, it returns `null` instead of the iframe's static `<body>`, as it already did in the main document.
   * For an element assigned to a `<slot>`, it looks for the positioned ancestor in the shadow tree that renders the element.
+* Updated to TypeScript 5.8.

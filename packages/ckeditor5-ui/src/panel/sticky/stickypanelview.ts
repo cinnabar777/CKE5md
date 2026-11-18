@@ -17,9 +17,10 @@ import {
 	type ObservableChangeEvent,
 	Rect,
 	toUnit,
-	getShadowRoots,
 	getVisualViewportOffset,
-	global
+	global,
+	getEventRoots,
+	DomTargetsListener
 } from '@ckeditor/ckeditor5-utils';
 
 // @if CK_DEBUG_STICKYPANEL // import {
@@ -147,12 +148,11 @@ export class StickyPanelView extends View {
 	private _contentPanelPlaceholder: HTMLElement;
 
 	/**
-	 * The shadow roots {@link #limiterElement} lives in, currently covered by their own `scroll` listener
-	 * (in addition to `document`). `scroll` is not `composed`, so it never crosses a shadow boundary: a
-	 * listener on `document`, even with `useCapture: true`, never sees a scrollable container inside a shadow
-	 * root hosting the limiter.
+	 * Keeps the `scroll` listener on `document` and on every event root of {@link #limiterElement}. `scroll` is not
+	 * `composed`, so it never crosses a shadow boundary: a listener on `document`, even with `useCapture: true`, never
+	 * sees a scrollable container inside a shadow root hosting the limiter. Created in {@link #render}.
 	 */
-	private _scrollListenerShadowRoots: Set<ShadowRoot> = new Set();
+	private _scrollListener: DomTargetsListener | null = null;
 
 	/**
 	 * @inheritDoc
@@ -239,19 +239,22 @@ export class StickyPanelView extends View {
 	public override render(): void {
 		super.render();
 
+		// Update sticky state of the panel as the window and ancestors are being scrolled.
+		this._scrollListener = new DomTargetsListener( () => [ global.document, ...getEventRoots( this.limiterElement ) ], {
+			emitter: this,
+			event: 'scroll',
+			listenerOptions: { useCapture: true },
+			callback: () => this.checkIfShouldBeSticky()
+		} );
+
 		// Check if the panel should go into the sticky state immediately.
 		this.checkIfShouldBeSticky();
-
-		// Update sticky state of the panel as the window and ancestors are being scrolled.
-		this.listenTo( global.document, 'scroll', () => {
-			this.checkIfShouldBeSticky();
-		}, { useCapture: true } );
 
 		// #checkIfShouldBeSticky() re-derives the roots on its own, but it is not called when the limiter is
 		// swapped, so cover that case here too — otherwise the new limiter's tree would go unlistened until
 		// something else happened to trigger a check.
 		this.listenTo<ObservableChangeEvent>( this, 'change:limiterElement', () => {
-			this._syncScrollListenerRoots();
+			this._scrollListener!.refresh();
 		} );
 
 		// Synchronize with `model.isActive` because sticking an inactive panel is pointless.
@@ -271,28 +274,6 @@ export class StickyPanelView extends View {
 	}
 
 	/**
-	 * Attaches or detaches the `scroll` listener on the shadow roots {@link #limiterElement} currently lives in,
-	 * so they match exactly. See {@link #_scrollListenerShadowRoots}.
-	 */
-	private _syncScrollListenerRoots(): void {
-		const currentRoots = this.limiterElement ? new Set( getShadowRoots( this.limiterElement ) ) : new Set<ShadowRoot>();
-
-		for ( const root of this._scrollListenerShadowRoots ) {
-			if ( !currentRoots.has( root ) ) {
-				this.stopListening( root, 'scroll' );
-				this._scrollListenerShadowRoots.delete( root );
-			}
-		}
-
-		for ( const root of currentRoots ) {
-			if ( !this._scrollListenerShadowRoots.has( root ) ) {
-				this.listenTo( root, 'scroll', this.checkIfShouldBeSticky.bind( this ), { useCapture: true } );
-				this._scrollListenerShadowRoots.add( root );
-			}
-		}
-	}
-
-	/**
 	 * Analyzes the environment to decide whether the panel should be sticky or not.
 	 * Then handles the positioning of the panel.
 	 */
@@ -304,7 +285,7 @@ export class StickyPanelView extends View {
 		// then replaces the source element, moving the whole tree. Re-deriving the roots here, rather than only
 		// when #limiterElement changes, keeps the listeners correct through such a move. The cost is negligible
 		// next to the rect math below, and this method is already the place where the environment is re-read.
-		this._syncScrollListenerRoots();
+		this._scrollListener?.refresh();
 
 		if ( !this.limiterElement || !this.isActive ) {
 			this._unstick();
@@ -397,7 +378,24 @@ export class StickyPanelView extends View {
 		this._isStickyToTheBottomOfLimiter = false;
 		this._stickyTopOffset = topOffset;
 		this._stickyBottomOffset = null;
-		this._marginLeft = toPx( -global.window.scrollX + getVisualViewportOffset().left );
+
+		const visualViewportOffset = getVisualViewportOffset();
+
+		// An ancestor with `transform`, `filter`, `contain`, or similar is the containing block of the `position: fixed`
+		// panel instead of the viewport, so `top` is relative to that ancestor, which may also scroll its content.
+		// Measuring where the panel landed covers all such cases (https://github.com/ckeditor/ckeditor5/issues/18328).
+		// In Safari, the measured rect is relative to the visual viewport, like the limiter's one in `checkIfShouldBeSticky()`,
+		// so the same offset is added. The offset is rounded, so differences below 1px are not misplacements.
+		const misplacement = this._contentPanelRect.top + visualViewportOffset.top - topOffset;
+
+		if ( Math.abs( misplacement ) >= 1 ) {
+			this._stickyTopOffset = topOffset - misplacement;
+
+			// The panel's static position inside such an ancestor already follows the page's horizontal scroll.
+			this._marginLeft = null;
+		} else {
+			this._marginLeft = toPx( -global.window.scrollX + visualViewportOffset.left );
+		}
 	}
 
 	/**
@@ -420,11 +418,14 @@ export class StickyPanelView extends View {
 	 * @private
 	 */
 	private _unstick() {
-		this.isSticky = false;
+		// Reset the offsets first so that `change:isSticky` listeners reading the layout see the panel back in the flow.
+		// Otherwise, the panel would still be absolutely positioned at the bottom of the limiter while the placeholder
+		// is already hidden, and the browser scroll anchoring would scroll the page back by the panel height.
 		this._isStickyToTheBottomOfLimiter = false;
 		this._stickyTopOffset = null;
 		this._stickyBottomOffset = null;
 		this._marginLeft = null;
+		this.isSticky = false;
 	}
 
 	/**

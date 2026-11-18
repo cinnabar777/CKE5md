@@ -33,11 +33,11 @@
 	 */
 	& > .ck-list__item.ck-mentions__item_focused > .ck-button {
 		border-color: var(--ck-button-focus-border-color);
-		box-shadow: var(--ck-focus-outer-shadow, var(--ck-interactive-focus-shadow)), 0 0;
+		box-shadow: var(--ck-focus-outer-shadow, var(--ck-button-focus-shadow, var(--ck-interactive-focus-shadow))), 0 0;
 	}
 }
 
 div.ck.ck-balloon-panel.ck-mention-balloon {
-	/* Backward compatibility: falls back to legacy --ck-z-dialog if overridden. */
-	z-index: calc( var( --ck-z-dialog, var(--ck-z-modal) ) + 1 );
+	/* Above dialogs. The legacy --ck-z-dialog keeps working through --ck-layer-dialog. */
+	z-index: calc( var(--ck-layer-dialog) + 1 );
 }
